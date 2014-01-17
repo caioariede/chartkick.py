@@ -2,7 +2,7 @@
  * Chartkick.js
  * Create beautiful Javascript charts with minimal code
  * https://github.com/ankane/chartkick.js
- * v1.1.0
+ * v1.1.1
  * MIT License
  */
 
@@ -13,7 +13,7 @@
   'use strict';
 
   var Chartkick, ISO8601_PATTERN, DECIMAL_SEPARATOR, defaultOptions, hideLegend,
-    setMin, setMax, jsOptions, loaded, waitForLoaded, setBarMin, setBarMax, createDataTable, resize;
+    setMin, setMax, setStacked, jsOptions, loaded, waitForLoaded, setBarMin, setBarMax, createDataTable, resize;
 
   // only functions that need defined specific to charting library
   var renderLineChart, renderPieChart, renderColumnChart, renderBarChart, renderAreaChart;
@@ -105,7 +105,7 @@
     return false;
   }
 
-  function jsOptionsFunc(defaultOptions, hideLegend, setMin, setMax) {
+  function jsOptionsFunc(defaultOptions, hideLegend, setMin, setMax, setStacked) {
     return function (series, opts, chartOptions) {
       var options = merge({}, defaultOptions);
       options = merge(options, chartOptions || {});
@@ -126,6 +126,10 @@
       // max
       if ("max" in opts) {
         setMax(options, opts.max);
+      }
+
+      if (opts.stacked) {
+        setStacked(options);
       }
 
       // merge library last
@@ -275,7 +279,11 @@
       options.yAxis.max = max;
     };
 
-    jsOptions = jsOptionsFunc(defaultOptions, hideLegend, setMin, setMax);
+    setStacked = function (options) {
+      options.plotOptions.series.stacking = "normal";
+    };
+
+    jsOptions = jsOptionsFunc(defaultOptions, hideLegend, setMin, setMax, setStacked);
 
     renderLineChart = function (element, series, opts, chartType) {
       chartType = chartType || "spline";
@@ -377,7 +385,12 @@
     google.setOnLoadCallback(function () {
       loaded = true;
     });
-    google.load("visualization", "1.0", {"packages": ["corechart"]});
+    var loadOptions = {"packages": ["corechart"]};
+    var config = window.Chartkick || {};
+    if (config.language) {
+      loadOptions.language = config.language;
+    }
+    google.load("visualization", "1.0", loadOptions);
 
     waitForLoaded = function (callback) {
       google.setOnLoadCallback(callback); // always do this to prevent race conditions (watch out for other issues due to this)
@@ -447,7 +460,11 @@
       options.hAxis.viewWindow.max = max;
     };
 
-    jsOptions = jsOptionsFunc(defaultOptions, hideLegend, setMin, setMax);
+    setStacked = function (options) {
+      options.isStacked = true;
+    };
+
+    jsOptions = jsOptionsFunc(defaultOptions, hideLegend, setMin, setMax, setStacked);
 
     // cant use object as key
     createDataTable = function (series, columnType) {
@@ -545,7 +562,7 @@
             }
           }
         };
-        var options = jsOptionsFunc(defaultOptions, hideLegend, setBarMin, setBarMax)(series, opts, chartOptions);
+        var options = jsOptionsFunc(defaultOptions, hideLegend, setBarMin, setBarMax, setStacked)(series, opts, chartOptions);
         var data = createDataTable(series, "string");
         var chart = new google.visualization.BarChart(element);
         resize(function () {
